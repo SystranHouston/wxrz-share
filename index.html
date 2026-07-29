@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Interactive 3D model component explorer (copy) (copy) (copy)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body, #root { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Inter', sans-serif; }
+    canvas { display: block; outline: none; }
+
+    /* ── Sidebar ── */
+    #sidebar {
+      position: fixed; top: 0; left: 0; width: 240px; height: 100%;
+      background: rgba(15,15,20,0.88); backdrop-filter: blur(12px);
+      border-right: 1px solid rgba(255,255,255,0.08);
+      display: flex; flex-direction: column; z-index: 10; overflow: hidden;
+    }
+    #sidebar-header {
+      padding: 16px 16px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+    #sidebar-header h1 { font-size: 13px; font-weight: 600; color: #f1f5f9; letter-spacing: 0.04em; text-transform: uppercase; }
+    #sidebar-header p  { font-size: 11px; color: #64748b; margin-top: 2px; }
+
+    .section-label {
+      font-size: 10px; font-weight: 600; color: #475569;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      padding: 12px 16px 6px;
+    }
+
+    /* Explode slider */
+    #explode-wrap { padding: 0 16px 12px; }
+    #explode-slider {
+      width: 100%; -webkit-appearance: none; appearance: none;
+      height: 4px; border-radius: 2px;
+      background: linear-gradient(to right, #3b82f6 0%, #3b82f6 var(--pct, 0%), #334155 var(--pct, 0%), #334155 100%);
+      outline: none; cursor: pointer;
+    }
+    #explode-slider::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 14px; height: 14px;
+      border-radius: 50%; background: #3b82f6; border: 2px solid #fff; cursor: pointer;
+    }
+    #zoom-slider::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 14px; height: 14px;
+      border-radius: 50%; background: #3b82f6; border: 2px solid #fff; cursor: pointer;
+    }
+
+    /* Display buttons */
+    #display-btns { display: flex; flex-direction: column; gap: 4px; padding: 0 16px 12px; }
+    .disp-btn {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.04); color: #94a3b8;
+      font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s;
+      font-family: inherit;
+    }
+    .disp-btn:hover { background: rgba(255,255,255,0.08); color: #e2e8f0; }
+    .disp-btn.active { background: rgba(59,130,246,0.15); border-color: rgba(59,130,246,0.4); color: #93c5fd; }
+    .disp-btn svg { flex-shrink: 0; opacity: 0.7; }
+
+    /* Parts list */
+    #parts-list {
+      flex: 1; overflow-y: auto; padding: 0 8px 8px;
+      scrollbar-width: thin; scrollbar-color: #334155 transparent;
+    }
+    #parts-list::-webkit-scrollbar { width: 4px; }
+    #parts-list::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+
+    .part-item {
+      padding: 7px 10px; border-radius: 6px; font-size: 12px; color: #94a3b8;
+      cursor: pointer; transition: all 0.12s; border: 1px solid transparent;
+    }
+    .part-item:hover { background: rgba(255,255,255,0.06); color: #e2e8f0; }
+    .part-item.active {
+      background: rgba(59,130,246,0.12); border-color: rgba(59,130,246,0.35);
+      color: #93c5fd;
+    }
+
+    /* ── Info Panel ── */
+    #info-panel {
+      position: fixed; bottom: 20px; left: 256px;
+      width: 300px; background: rgba(15,15,20,0.92); backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.09); border-radius: 10px;
+      padding: 14px 16px; z-index: 10; display: none;
+    }
+    #info-name { font-size: 14px; font-weight: 600; color: #f1f5f9; margin-bottom: 6px; }
+    #info-desc { font-size: 12px; color: #94a3b8; line-height: 1.6; }
+
+    /* ── Q&A Panel ── */
+    #qa-panel {
+      display: none !important;
+    }
+    #qa-header {
+      padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.07);
+      font-size: 11px; font-weight: 600; color: #64748b;
+      letter-spacing: 0.07em; text-transform: uppercase;
+    }
+    #qa-log {
+      flex: 1; max-height: 200px; overflow-y: auto; padding: 10px;
+      display: flex; flex-direction: column; gap: 6px;
+      scrollbar-width: thin; scrollbar-color: #334155 transparent;
+    }
+    #qa-log::-webkit-scrollbar { width: 4px; }
+    #qa-log::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+
+    .qa-msg { font-size: 12px; line-height: 1.55; padding: 7px 10px; border-radius: 7px; max-width: 90%; }
+    .qa-user      { background: rgba(59,130,246,0.18); color: #93c5fd; align-self: flex-end; }
+    .qa-assistant { background: rgba(255,255,255,0.06); color: #cbd5e1; align-self: flex-start; }
+
+    #qa-footer { display: flex; gap: 6px; padding: 8px; border-top: 1px solid rgba(255,255,255,0.07); }
+    #qa-input {
+      flex: 1; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 6px; padding: 6px 10px; font-size: 12px; color: #e2e8f0;
+      font-family: inherit; outline: none;
+    }
+    #qa-input::placeholder { color: #475569; }
+    #qa-input:focus { border-color: rgba(59,130,246,0.4); }
+    #qa-send {
+      padding: 6px 12px; background: #3b82f6; border: none; border-radius: 6px;
+      color: #fff; font-size: 12px; font-weight: 500; cursor: pointer;
+      font-family: inherit; transition: background 0.15s;
+    }
+    #qa-send:hover { background: #2563eb; }
+
+    /* ── Version Badge ── */
+    #version-badge {
+      font-size: 10px; font-weight: 600; color: #3b82f6;
+      background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.3);
+      padding: 2px 7px; border-radius: 10px; letter-spacing: 0.03em;
+      white-space: nowrap;
+    }
+
+    /* ── Debug Log Toggle ── */
+    #debug-toggle {
+      position: fixed; top: 14px; right: 20px; z-index: 20;
+      width: 34px; height: 34px; border-radius: 8px;
+      background: rgba(15,15,20,0.88); backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.09);
+      color: #94a3b8; font-size: 16px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+    }
+    #debug-toggle:hover { background: rgba(255,255,255,0.1); color: #e2e8f0; }
+    #debug-toggle.active { background: rgba(59,130,246,0.15); border-color: rgba(59,130,246,0.4); color: #93c5fd; }
+
+    /* ── Debug Log Panel ── */
+    #debug-panel {
+      position: fixed; top: 56px; right: 20px; z-index: 20;
+      width: 380px; max-height: 420px;
+      background: rgba(15,15,20,0.94); backdrop-filter: blur(14px);
+      border: 1px solid rgba(255,255,255,0.09); border-radius: 10px;
+      display: none; flex-direction: column; overflow: hidden;
+    }
+    #debug-panel.open { display: flex; }
+    #debug-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+    #debug-header-left {
+      display: flex; align-items: center; gap: 8px;
+    }
+    #debug-header-left span {
+      font-size: 12px; font-weight: 600; color: #e2e8f0; letter-spacing: 0.04em;
+    }
+    #debug-count {
+      font-size: 10px; font-weight: 600; color: #3b82f6;
+      background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.3);
+      padding: 1px 6px; border-radius: 10px;
+    }
+    #debug-actions { display: flex; gap: 6px; }
+    #debug-clear, #debug-close, #debug-copy-cam {
+      background: none; border: none; color: #64748b; font-size: 11px;
+      cursor: pointer; padding: 2px 6px; border-radius: 4px; transition: all 0.15s;
+      font-family: 'Inter', sans-serif;
+    }
+    #debug-clear:hover, #debug-close:hover, #debug-copy-cam:hover { color: #e2e8f0; }
+    #debug-copy-cam.copied { color: #22c55e; }
+    #debug-body {
+      padding: 0; overflow-y: auto; flex: 1; max-height: 360px;
+      scrollbar-width: thin; scrollbar-color: #334155 transparent;
+    }
+    #debug-body::-webkit-scrollbar { width: 4px; }
+    #debug-body::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+    .debug-entry {
+      padding: 5px 14px; font-size: 11px; font-family: 'Inter', monospace;
+      line-height: 1.5; border-bottom: 1px solid rgba(255,255,255,0.04);
+      word-break: break-all;
+    }
+    .debug-entry:last-child { border-bottom: none; }
+    .debug-entry .debug-time { color: #475569; margin-right: 8px; font-size: 10px; }
+    .debug-entry .debug-tag {
+      font-size: 9px; font-weight: 600; padding: 1px 4px; border-radius: 3px;
+      margin-right: 6px; text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .debug-log .debug-tag  { background: rgba(148,163,184,0.15); color: #94a3b8; }
+    .debug-warn .debug-tag { background: rgba(234,179,8,0.15); color: #eab308; }
+    .debug-error .debug-tag { background: rgba(239,68,68,0.15); color: #ef4444; }
+    .debug-info .debug-tag { background: rgba(59,130,246,0.15); color: #3b82f6; }
+    .debug-log  { color: #94a3b8; }
+    .debug-warn { color: #eab308; }
+    .debug-error { color: #ef4444; }
+    .debug-info { color: #93c5fd; }
+    .debug-empty {
+      padding: 24px 14px; text-align: center; font-size: 11px; color: #475569;
+    }
+
+    /* ── Fullscreen Toggle ── */
+    #fullscreen-toggle {
+      position: fixed; top: 14px; right: 62px; z-index: 20;
+      width: 34px; height: 34px; border-radius: 8px;
+      background: rgba(15,15,20,0.88); backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.09);
+      color: #94a3b8; font-size: 16px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+    }
+    #fullscreen-toggle:hover { background: rgba(255,255,255,0.1); color: #e2e8f0; }
+    #fullscreen-toggle.active { background: rgba(59,130,246,0.15); border-color: rgba(59,130,246,0.4); color: #93c5fd; }
+
+    /* ── Changelog Toggle ── */
+    #changelog-toggle {
+      position: fixed; top: 14px; right: 104px; z-index: 20;
+      width: 34px; height: 34px; border-radius: 8px;
+      background: rgba(15,15,20,0.88); backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.09);
+      color: #94a3b8; font-size: 16px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+    }
+    #changelog-toggle:hover { background: rgba(255,255,255,0.1); color: #e2e8f0; }
+
+    /* ── Changelog Panel ── */
+    #changelog-panel {
+      position: fixed; top: 56px; right: 104px; z-index: 20;
+      width: 320px; max-height: 420px;
+      background: rgba(15,15,20,0.94); backdrop-filter: blur(14px);
+      border: 1px solid rgba(255,255,255,0.09); border-radius: 10px;
+      display: none; flex-direction: column; overflow: hidden;
+    }
+    #changelog-panel.open { display: flex; }
+    #changelog-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.07);
+      font-size: 12px; font-weight: 600; color: #e2e8f0; letter-spacing: 0.04em;
+    }
+    #changelog-close {
+      background: none; border: none; color: #64748b; font-size: 14px;
+      cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: color 0.15s;
+    }
+    #changelog-close:hover { color: #e2e8f0; }
+    #changelog-body {
+      padding: 12px 14px; overflow-y: auto; flex: 1;
+      scrollbar-width: thin; scrollbar-color: #334155 transparent;
+    }
+    #changelog-body::-webkit-scrollbar { width: 4px; }
+    #changelog-body::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+    .changelog-entry { margin-bottom: 16px; }
+    .changelog-entry:last-child { margin-bottom: 0; }
+    .changelog-version {
+      font-size: 13px; font-weight: 600; color: #93c5fd; margin-bottom: 6px;
+    }
+    .changelog-date { font-weight: 400; color: #475569; font-size: 11px; }
+    .changelog-entry ul {
+      list-style: none; padding: 0; margin: 0;
+    }
+    .changelog-entry li {
+      font-size: 11px; color: #94a3b8; line-height: 1.7;
+      padding-left: 14px; position: relative;
+    }
+    .changelog-entry li::before {
+      content: '•'; position: absolute; left: 2px; color: #475569;
+    }
+
+    /* ── Q&A Toggle Button ── */
+    #qa-toggle {
+      display: none !important;
+    }
+
+    /* ── TTS Button ── */
+    .tts-btn {
+      background: none; border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 5px; color: #64748b; font-size: 14px;
+      cursor: pointer; padding: 3px 7px; margin-left: 8px;
+      transition: all 0.15s; vertical-align: middle;
+    }
+    .tts-btn:hover { color: #e2e8f0; border-color: rgba(255,255,255,0.25); }
+    .tts-btn.speaking { color: #3b82f6; border-color: rgba(59,130,246,0.4); }
+
+    /* ── Tour Button ── */
+    #tour-toggle {
+      position: fixed; top: 56px; right: 104px; z-index: 20;
+      width: 34px; height: 34px; border-radius: 8px;
+      background: rgba(15,15,20,0.88); backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.09);
+      color: #94a3b8; font-size: 16px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+    }
+    #tour-toggle:hover { background: rgba(255,255,255,0.1); color: #e2e8f0; }
+    #tour-toggle.active { background: rgba(59,130,246,0.15); border-color: rgba(59,130,246,0.4); color: #93c5fd; }
+
+    /* ── Tour Overlay ── */
+    #tour-overlay {
+      position: fixed; bottom: 20px; left: 256px;
+      width: 340px; max-width: calc(100vw - 300px);
+      max-height: calc(100vh - 80px); overflow-y: auto;
+      background: rgba(15,15,20,0.95); backdrop-filter: blur(14px);
+      border: 1px solid rgba(59,130,246,0.3); border-radius: 12px;
+      padding: 16px 18px; z-index: 30; display: none;
+      flex-direction: column; gap: 10px;
+    }
+    #tour-overlay.visible { display: flex; }
+    #tour-top {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    #tour-step-label {
+      font-size: 10px; font-weight: 600; color: #3b82f6;
+      letter-spacing: 0.08em; text-transform: uppercase;
+    }
+    #tour-close-btn {
+      background: none; border: none; color: #475569; font-size: 14px;
+      cursor: pointer; padding: 2px 4px; border-radius: 4px;
+      transition: color 0.15s; font-family: inherit;
+    }
+    #tour-close-btn:hover { color: #e2e8f0; }
+    #tour-component-name {
+      font-size: 15px; font-weight: 600; color: #f1f5f9;
+    }
+    #tour-desc {
+      font-size: 12px; color: #94a3b8; line-height: 1.65;
+    }
+    #tour-progress-bar {
+      height: 3px; background: #1e293b; border-radius: 2px; overflow: hidden;
+    }
+    #tour-progress-fill {
+      height: 100%; background: #3b82f6; border-radius: 2px;
+      transition: width 0.4s ease;
+    }
+    #tour-nav {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .tour-nav-btn {
+      display: flex; align-items: center; gap: 5px;
+      padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.09);
+      background: rgba(255,255,255,0.05); color: #94a3b8;
+      font-size: 12px; font-weight: 500; cursor: pointer;
+      font-family: inherit; transition: all 0.15s;
+    }
+    .tour-nav-btn:hover { background: rgba(255,255,255,0.1); color: #e2e8f0; }
+    .tour-nav-btn:disabled { opacity: 0.3; cursor: default; }
+    .tour-nav-btn.primary {
+      background: rgba(59,130,246,0.2); border-color: rgba(59,130,246,0.4);
+      color: #93c5fd;
+    }
+    .tour-nav-btn.primary:hover { background: rgba(59,130,246,0.3); }
+    #tour-auto-btn {
+      padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.09);
+      background: rgba(255,255,255,0.05); color: #94a3b8;
+      font-size: 11px; cursor: pointer; font-family: inherit; transition: all 0.15s;
+    }
+    #tour-auto-btn:hover { background: rgba(255,255,255,0.1); color: #e2e8f0; }
+    #tour-auto-btn.playing { background: rgba(59,130,246,0.15); border-color: rgba(59,130,246,0.3); color: #93c5fd; }
+
+    /* ── Isolate Button ── */
+    .isolate-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      margin-top: 10px; padding: 6px 12px;
+      background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.35);
+      border-radius: 6px; color: #a5b4fc;
+      font-size: 11px; font-weight: 600; cursor: pointer;
+      font-family: inherit; transition: all 0.15s; letter-spacing: 0.03em;
+      width: 100%; justify-content: center;
+    }
+    .isolate-btn:hover { background: rgba(99,102,241,0.22); color: #c7d2fe; }
+    .isolate-btn.active { background: rgba(99,102,241,0.25); border-color: rgba(99,102,241,0.6); color: #c7d2fe; }
+
+    /* ── Isolation Bar ── */
+    #isolate-bar {
+      position: fixed; top: 0; left: 0; right: 0; height: 44px;
+      background: rgba(99,102,241,0.18); backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(99,102,241,0.4);
+      display: none; align-items: center; justify-content: space-between;
+      padding: 0 20px 0 256px; z-index: 50; gap: 12px;
+    }
+    #isolate-part-name {
+      font-size: 13px; font-weight: 600; color: #c7d2fe; letter-spacing: 0.03em;
+    }
+    #isolate-hint {
+      font-size: 11px; color: rgba(165,180,252,0.6); flex: 1; text-align: center;
+    }
+    #isolate-exit-btn {
+      padding: 5px 14px; background: rgba(99,102,241,0.25);
+      border: 1px solid rgba(99,102,241,0.5); border-radius: 6px;
+      color: #a5b4fc; font-size: 11px; font-weight: 600;
+      cursor: pointer; font-family: inherit; transition: all 0.15s;
+      white-space: nowrap;
+    }
+    #isolate-exit-btn:hover { background: rgba(99,102,241,0.4); color: #e0e7ff; }
+
+    /* ── Tooltip ── */
+    #tooltip {
+      position: fixed; pointer-events: none; display: none;
+      background: rgba(15,15,20,0.9); border: 1px solid rgba(255,255,255,0.12);
+      color: #f1f5f9; font-size: 12px; padding: 5px 10px; border-radius: 6px;
+      font-family: inherit; z-index: 100;
+    }
+
+    /* ── Draggable panel headers ── */
+    .drag-handle {
+      cursor: grab; user-select: none; -webkit-user-select: none;
+    }
+    .drag-handle:active { cursor: grabbing; }
+
+    /* ── Video Overlay ── */
+    #video-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
+      z-index: 200; display: none; align-items: center; justify-content: center;
+    }
+    #video-overlay.open { display: flex; }
+    #video-container {
+      position: relative; width: 80%; max-width: 900px;
+      background: #0f0f14; border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px; overflow: hidden;
+    }
+    #video-close {
+      position: absolute; top: 10px; right: 12px; z-index: 210;
+      background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 6px; color: #94a3b8; font-size: 16px;
+      width: 32px; height: 32px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s; font-family: inherit;
+    }
+    #video-close:hover { background: rgba(255,255,255,0.15); color: #e2e8f0; }
+    #video-embed {
+      position: relative; padding-top: 56.25%;
+    }
+    #video-embed iframe {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;
+    }
+
+    /* ── Touch-friendly ── */
+    @media (pointer: coarse) {
+      .disp-btn { padding: 10px 12px; font-size: 13px; min-height: 44px; }
+      .part-item { padding: 10px 12px; font-size: 13px; min-height: 44px; display: flex; align-items: center; }
+      #explode-slider, #zoom-slider { height: 6px; }
+      #explode-slider::-webkit-slider-thumb,
+      #zoom-slider::-webkit-slider-thumb { width: 22px; height: 22px; }
+      .tour-nav-btn { padding: 10px 16px; font-size: 13px; min-height: 44px; }
+      #tour-auto-btn { padding: 10px 14px; font-size: 12px; min-height: 44px; }
+      .isolate-btn { padding: 10px 14px; font-size: 12px; min-height: 44px; }
+      .tts-btn { padding: 6px 10px; font-size: 16px; min-width: 40px; min-height: 40px; }
+      #changelog-toggle, #tour-toggle, #fullscreen-toggle, #qa-toggle {
+        width: 44px; height: 44px; font-size: 20px;
+      }
+      #fullscreen-toggle { right: 16px; top: 12px; }
+      #debug-toggle { right: 16px; top: 12px; }
+      #changelog-toggle { right: 116px; top: 12px; }
+      #tour-toggle { right: 116px; top: 64px; }
+    }
+    #explode-slider, #zoom-slider { touch-action: none; }
+
+  </style>
+  <script type="module" crossorigin src="./assets/index-BLii0KDo.js"></script>
+</head>
+<body>
+  <!-- Boot cover: opaque from the very first paint so the desktop interface
+       never flickers while config.js / index.js / three.js load. index.js
+       removes it once it has decided what to show (launch screen vs viewer).
+       The inline failsafe clears it if the app script dies before that. -->
+  <div id="boot-cover" style="position:fixed;inset:0;z-index:200;background:#0a0c10;"></div>
+  <script>setTimeout(function(){var b=document.getElementById('boot-cover');if(b)b.remove();},10000);</script>
+  <div id="root"></div>
+
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <div id="sidebar-header">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <h1 id="sidebar-title"></h1>
+        <span id="version-badge"></span>
+      </div>
+      <p id="sidebar-subtitle"></p>
+    </div>
+
+    <div class="section-label">Explode</div>
+    <div id="explode-wrap">
+      <input type="range" id="explode-slider" min="0" max="1" step="0.01" value="0" />
+    </div>
+
+    <div class="section-label">Display</div>
+    <div id="display-btns">
+      <button class="disp-btn active" id="btn-ground">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        <span id="ground-label">Grid</span>
+      </button>
+      <button class="disp-btn" id="btn-auto-rotate">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.22-8.56"/><polyline points="21 3 21 9 15 9"/></svg>
+        Auto-Rotate
+      </button>
+      <button class="disp-btn" id="btn-cross-section">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="3" y1="12" x2="21" y2="12"/></svg>
+        Cross-Section
+      </button>
+      <button class="disp-btn" id="btn-video">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Watch Video
+      </button>
+      <button class="disp-btn" id="btn-reset">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.14"/></svg>
+        Reset View
+      </button>
+    </div>
+
+    <div class="section-label">Zoom</div>
+    <div id="zoom-wrap" style="padding: 0 16px 12px;">
+      <input type="range" id="zoom-slider" min="0.3" max="3" step="0.01" value="1.2"
+        style="width:100%; -webkit-appearance:none; appearance:none; height:4px; border-radius:2px;
+        background: linear-gradient(to right, #3b82f6 0%, #3b82f6 var(--zpct, 33%), #334155 var(--zpct, 33%), #334155 100%);
+        outline:none; cursor:pointer;" />
+    </div>
+
+    <div class="section-label">Components</div>
+    <div id="parts-list"></div>
+  </div>
+
+  <!-- Info Panel -->
+  <div id="info-panel">
+    <div class="drag-handle" style="display:flex;align-items:center;">
+      <div id="info-name" style="flex:1;"></div>
+      <button class="tts-btn" id="info-tts" title="Read aloud">🔊</button>
+    </div>
+    <div id="info-desc"></div>
+    <button id="btn-isolate" class="isolate-btn" style="display:none;">⬡ Isolate</button>
+  </div>
+
+  <!-- Isolation Bar -->
+  <div id="isolate-bar">
+    <span id="isolate-part-name"></span>
+    <span id="isolate-hint">Isolated view — drag to rotate, scroll to zoom</span>
+    <button id="isolate-exit-btn">✕ Exit Isolation</button>
+  </div>
+
+  <!-- Q&A Toggle Button -->
+  <button id="qa-toggle" title="Toggle Q&A">💬</button>
+
+  <!-- Q&A Panel -->
+  <div id="qa-panel">
+    <div id="qa-header" class="drag-handle">Ask a question</div>
+    <div id="qa-log"></div>
+    <div id="qa-footer">
+      <input id="qa-input" type="text" placeholder="e.g. What does the gate do?" />
+      <button id="qa-send">Send</button>
+    </div>
+  </div>
+
+  <!-- Tour Toggle Button -->
+  <button id="tour-toggle" title="Guided Tour">▶</button>
+
+  <!-- Tour Overlay -->
+  <div id="tour-overlay">
+    <div id="tour-top" class="drag-handle">
+      <span id="tour-step-label">Step 1 of 10</span>
+      <button id="tour-close-btn">✕</button>
+    </div>
+    <div style="display:flex;align-items:center;">
+      <div id="tour-component-name" style="flex:1;"></div>
+      <button class="tts-btn" id="tour-tts" title="Read aloud">🔊</button>
+    </div>
+    <div id="tour-desc"></div>
+    <div id="tour-progress-bar"><div id="tour-progress-fill"></div></div>
+    <div id="tour-nav">
+      <button class="tour-nav-btn" id="tour-prev-btn">← Prev</button>
+      <button id="tour-auto-btn" title="Auto-play">▵ Auto</button>
+      <button class="tour-nav-btn primary" id="tour-next-btn">Next →</button>
+    </div>
+  </div>
+
+  <!-- Debug Log Toggle Button -->
+  <button id="debug-toggle" title="Debug Log">🐛</button>
+
+  <!-- Debug Log Panel -->
+  <div id="debug-panel">
+    <div id="debug-header">
+      <div id="debug-header-left">
+        <span>Debug Log</span>
+        <span id="debug-count">0</span>
+      </div>
+      <div id="debug-actions">
+        <button id="debug-copy-cam" title="Copy current camera config to clipboard">📷 Copy Camera</button>
+        <button id="debug-clear">Clear</button>
+        <button id="debug-close">✕</button>
+      </div>
+    </div>
+    <div id="debug-body">
+      <div class="debug-empty">No log entries yet</div>
+    </div>
+  </div>
+
+  <!-- Fullscreen Toggle Button -->
+  <button id="fullscreen-toggle" title="Fullscreen">⛶</button>
+
+  <!-- Changelog Toggle Button -->
+  <button id="changelog-toggle" title="Changelog">📋</button>
+
+  <!-- Changelog Panel -->
+  <div id="changelog-panel">
+    <div id="changelog-header" class="drag-handle">
+      <span>Changelog</span>
+      <button id="changelog-close">✕</button>
+    </div>
+    <div id="changelog-body"></div>
+  </div>
+
+  <!-- Video Overlay -->
+  <div id="video-overlay">
+    <div id="video-container">
+      <button id="video-close">✕</button>
+      <div id="video-embed">
+        <iframe src="" title="Pilot Control Valve Video" allow="autoplay; fullscreen" allowtransparency="true" frameborder="0" scrolling="no" class="wistia_embed" name="wistia_embed"></iframe>
+      </div>
+    </div>
+  </div>
+  <script src="https://fast.wistia.net/player.js" async></script>
+
+  <!-- Tooltip -->
+  <div id="tooltip"></div>
+
+  <!-- Model select (?model=NAME): loads config.NAME.js in place of the
+       default config.js — the MVP multi-model mechanism (PLAN Phase 4).
+       document.write keeps the config a parser-blocking classic script, so
+       it is guaranteed to finish before the index.js module runs (same
+       ordering the plain script tag had). The name is whitelisted to
+       [A-Za-z0-9_-] — it is written into markup. -->
+  <script>
+    (function () {
+      var m = null;
+      try { m = new URLSearchParams(location.search).get('model'); } catch (e) {}
+      var src = (m && /^[A-Za-z0-9_-]{1,40}$/.test(m)) ? 'config.' + m + '.js' : 'config.js';
+      document.write('<script src="' + src + '"><\/script>');
+    })();
+  </script>
+  <!-- Fallback: if the named config 404'd (typo in ?model=, missing file),
+       load the default instead of letting index.js crash on an undefined
+       VIEWER_CONFIG. Runs after the tag above because document.written
+       classic scripts block the parser. -->
+  <script>
+    if (!window.VIEWER_CONFIG) document.write('<script src="config.js"><\/script>');
+  </script>
+</body>
+</html>
