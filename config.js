@@ -18,7 +18,7 @@ window.VIEWER_CONFIG = {
   // Valve open/close animation duration (seconds). On-hardware history:
   // 0.7 jarring, 1.5 still too fast. ?animsecs= overrides for tuning.
   valveAnimSeconds: 2.5,
-  version:     "v1.0.0",
+  version:     "v1.0.1",
   // Branding for the in-XR ABOUT panel (white-on-transparent for dark glass).
   brand: {
     logoWhite: "systranLogoWhite.png",
@@ -31,6 +31,16 @@ window.VIEWER_CONFIG = {
   // Changelog (newest first) — rendered dynamically in sidebar
   // ----------------------------------------------------------
   changelog: [
+    {
+      version: "v1.0.1",
+      date: "2026-07-29",
+      items: [
+        "All XR controls consolidated into one capsule top-right — reset (↺), orbit (drawn planet-and-ring icon), about (i), close (✕) — with bigger, brighter icons; top bar slimmed to title + progress for long equipment names",
+        "Stylus tracking overhauled: pose-flip filtering now covers orientation, rejects the phantom pose by identity, arbitrates onto the moving pose after Alt-Tab, and can never freeze the ray for more than a moment — launch freak-out and the post-Alt-Tab dead stylus are gone",
+        "RE-ENTER 3D is one click: a session that dies during the 3D system's spin-up is retried automatically",
+        "ABOUT card simplified to logo + version and floats toward the viewer",
+      ],
+    },
     {
       version: "v1.0.0",
       date: "2026-07-29",
