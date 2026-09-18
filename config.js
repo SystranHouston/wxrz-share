@@ -18,7 +18,7 @@ window.VIEWER_CONFIG = {
   // Valve open/close animation duration (seconds). On-hardware history:
   // 0.7 jarring, 1.5 still too fast. ?animsecs= overrides for tuning.
   valveAnimSeconds: 2.5,
-  version:     "v1.0.1",
+  version:     "v1.0.2",
   // Branding for the in-XR ABOUT panel (white-on-transparent for dark glass).
   brand: {
     logoWhite: "systranLogoWhite.png",
@@ -31,6 +31,14 @@ window.VIEWER_CONFIG = {
   // Changelog (newest first) — rendered dynamically in sidebar
   // ----------------------------------------------------------
   changelog: [
+    {
+      version: "v1.0.2",
+      date: "2026-09-18",
+      items: [
+        "The '3D NOT AVAILABLE' warning and the RE-ENTER notice now name the usual culprit — Microsoft Teams holding the 3D tracking camera — with the quit-and-relaunch fix spelled out for trainees",
+        "Frozen-tracking detector: a session whose head tracking never moves surfaces the Teams hint on exit instead of ending in a silent flat view",
+      ],
+    },
     {
       version: "v1.0.1",
       date: "2026-07-29",
