@@ -23,13 +23,34 @@ window.VIEWER_CONFIG = {
   // Valve open/close animation duration (seconds). On-hardware history:
   // 0.7 jarring, 1.5 still too fast. ?animsecs= overrides for tuning.
   valveAnimSeconds: 2.5,
-  version:     "v0.3.4",
+  version:     "v1.1.0",
   videoUrl:    "https://fast.wistia.net/embed/iframe/1fzad2me8l?web_component=true&seo=false&autoPlay=1",
 
   // ----------------------------------------------------------
   // Changelog (newest first) — rendered dynamically in sidebar
   // ----------------------------------------------------------
   changelog: [
+    {
+      version: "v1.1.0",
+      date: "2026-10-23",
+      items: [
+        "Stylus loss recovered in place: when the tracker drops the stylus the 3D system hands the viewer a frozen copy of the old pose interleaved with the real one — the viewer now tells the two apart every frame and follows the hand, so putting the stylus down and picking it up no longer freezes the ray or throws the model",
+        "The automatic 3D restart on stylus loss is gone (it was restarting into a 3D system that kept killing new sessions); the centre button on the re-sync card restarts on request, and a restart that dies young is retried for up to ten seconds",
+        "Re-sync card explains what is happening and what to do while tracking recovers",
+        "3D controls can no longer vanish at the screen edges when the laptop lid angle changes",
+        "Placing a part with a slow, deliberate click keeps it where you put it instead of snapping back",
+        "Developer: ?stylusdbg=1 shows a live stylus-tracking panel inside 3D; ?dil=0 disables the new filter; ?autobounce=1 restores the old automatic restart",
+      ],
+    },
+    {
+      version: "v1.0.2",
+      date: "2026-09-18",
+      items: [
+        "Gate valve now ships as its own LMS package (wxrz-lms-vX.Y.Z-gatevalve.zip) with this config promoted to the default — no ?model= parameter needed inside Rise",
+        "Rides the v1.0.x app core: consolidated XR control capsule, hardened stylus tracking, one-click RE-ENTER 3D, non-XR warning gate, and the Teams-aware failure messages ('3D NOT AVAILABLE' and RE-ENTER name Microsoft Teams holding the tracking camera, with the trainee-level fix)",
+        "Gate-valve content itself (parts, tour, materials, Q&A) is unchanged since v0.3.4 — this entry marks the app-core catch-up, not a content change",
+      ],
+    },
     {
       version: "v0.3.4",
       date: "2026-07-13",

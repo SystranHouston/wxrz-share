@@ -18,7 +18,7 @@ window.VIEWER_CONFIG = {
   // Valve open/close animation duration (seconds). On-hardware history:
   // 0.7 jarring, 1.5 still too fast. ?animsecs= overrides for tuning.
   valveAnimSeconds: 2.5,
-  version:     "v1.0.2",
+  version:     "v1.1.0",
   // Branding for the in-XR ABOUT panel (white-on-transparent for dark glass).
   brand: {
     logoWhite: "systranLogoWhite.png",
@@ -31,6 +31,18 @@ window.VIEWER_CONFIG = {
   // Changelog (newest first) — rendered dynamically in sidebar
   // ----------------------------------------------------------
   changelog: [
+    {
+      version: "v1.1.0",
+      date: "2026-10-23",
+      items: [
+        "Stylus loss recovered in place: when the tracker drops the stylus the 3D system hands the viewer a frozen copy of the old pose interleaved with the real one — the viewer now tells the two apart every frame and follows the hand, so putting the stylus down and picking it up no longer freezes the ray or throws the model",
+        "The automatic 3D restart on stylus loss is gone (it was restarting into a 3D system that kept killing new sessions); the centre button on the re-sync card restarts on request, and a restart that dies young is retried for up to ten seconds",
+        "Re-sync card explains what is happening and what to do while tracking recovers",
+        "3D controls can no longer vanish at the screen edges when the laptop lid angle changes",
+        "Placing a part with a slow, deliberate click keeps it where you put it instead of snapping back",
+        "Developer: ?stylusdbg=1 shows a live stylus-tracking panel inside 3D; ?dil=0 disables the new filter; ?autobounce=1 restores the old automatic restart",
+      ],
+    },
     {
       version: "v1.0.2",
       date: "2026-09-18",
