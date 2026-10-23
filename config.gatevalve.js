@@ -24,6 +24,13 @@ window.VIEWER_CONFIG = {
   // 0.7 jarring, 1.5 still too fast. ?animsecs= overrides for tuning.
   valveAnimSeconds: 2.5,
   version:     "v1.1.0",
+  // Branding for the in-XR ABOUT panel (white-on-transparent for dark glass).
+  // Without this block the ABOUT card is never built and the capsule's (i)
+  // stays hidden (2026-10-23, "why is the info button missing on the valve?").
+  brand: {
+    logoWhite: "systranLogoWhite.png",
+    line:      "SYSTRAN · Custom Learning Solutions",
+  },
   videoUrl:    "https://fast.wistia.net/embed/iframe/1fzad2me8l?web_component=true&seo=false&autoPlay=1",
 
   // ----------------------------------------------------------
