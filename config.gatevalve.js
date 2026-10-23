@@ -23,7 +23,7 @@ window.VIEWER_CONFIG = {
   // Valve open/close animation duration (seconds). On-hardware history:
   // 0.7 jarring, 1.5 still too fast. ?animsecs= overrides for tuning.
   valveAnimSeconds: 2.5,
-  version:     "v1.1.0",
+  version:     "v1.1.1",
   // Branding for the in-XR ABOUT panel (white-on-transparent for dark glass).
   // Without this block the ABOUT card is never built and the capsule's (i)
   // stays hidden (2026-10-23, "why is the info button missing on the valve?").
@@ -37,6 +37,14 @@ window.VIEWER_CONFIG = {
   // Changelog (newest first) — rendered dynamically in sidebar
   // ----------------------------------------------------------
   changelog: [
+    {
+      version: "v1.1.1",
+      date: "2026-10-23",
+      items: [
+        "Re-entering 3D after an exploded view no longer shrinks the model: placement always measures the assembled valve",
+        "When the 3D system drops the session on its own (second Inspire: about a minute after the stylus is put down), RE-ENTER 3D puts you back where you were - model pose, open card and orbit state - instead of starting over",
+      ],
+    },
     {
       version: "v1.1.0",
       date: "2026-10-23",
