@@ -23,7 +23,7 @@ window.VIEWER_CONFIG = {
   // Valve open/close animation duration (seconds). On-hardware history:
   // 0.7 jarring, 1.5 still too fast. ?animsecs= overrides for tuning.
   valveAnimSeconds: 2.5,
-  version:     "v1.1.2",
+  version:     "v1.1.3",
   // Branding for the in-XR ABOUT panel (white-on-transparent for dark glass).
   // Without this block the ABOUT card is never built and the capsule's (i)
   // stays hidden (2026-10-23, "why is the info button missing on the valve?").
@@ -37,6 +37,15 @@ window.VIEWER_CONFIG = {
   // Changelog (newest first) — rendered dynamically in sidebar
   // ----------------------------------------------------------
   changelog: [
+    {
+      version: "v1.1.3",
+      date: "2026-10-23",
+      items: [
+        "Beam stays hidden while the stylus is out of camera view and comes back only after it has been tracked again for a moment, so the origin line can no longer blink",
+        "Definition card is 30 percent larger for readability",
+        "Definition card can be dragged: hold the centre button on the card and move the stylus (mouse drag works too); it keeps its place for the session",
+      ],
+    },
     {
       version: "v1.1.2",
       date: "2026-10-23",
