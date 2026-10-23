@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>zSpace WebXR stereo probe</title>
+<style>
+  body { font: 14px monospace; background: #111; color: #8fe; margin: 0; padding: 20px; }
+  h2 { margin-top: 0; }
+  #log { white-space: pre-wrap; background: #000; padding: 12px; border: 1px solid #345;
+         border-radius: 6px; max-height: 70vh; overflow: auto; }
+  button { font: 16px monospace; padding: 10px 20px; margin: 0 8px 14px 0; cursor: pointer; }
+</style>
+</head>
+<body>
+<h2>zSpace WebXR stereo probe — no libraries</h2>
+<p>Left eye renders solid <b style="color:#f44">RED</b>, right eye solid <b style="color:#48f">BLUE</b>.<br>
+If the panel is in 3D you will see a red/blue clash (each eye its own colour).<br>
+If it shows one solid colour only, presentation is mono (2D). Press Esc to exit.</p>
+<button id="go">ENTER VR</button>
+<button id="copy">Copy log</button>
+<div id="log"></div>
+<script>
+var logEl = document.getElementById('log');
+function log(m) {
+  logEl.textContent += m + '\n';
+  console.log('[probe] ' + m);
+  logEl.scrollTop = 1e9;
+}
+document.getElementById('copy').onclick = function () {
+  navigator.clipboard.writeText(logEl.textContent);
+};
+
+log('userAgent: ' + navigator.userAgent);
+log('navigator.xr present: ' + !!navigator.xr);
+if (navigator.xr) {
+  log('requestSession native: ' + /\[native code\]/.test(String(navigator.xr.requestSession)));
+}
+log('XRWebGLBinding in window: ' + ('XRWebGLBinding' in window));
+log('---');
+
+var gl, session, refSpace, layer, loggedFrame;
+
+document.getElementById('go').onclick = function () { start(); };
+
+async function start() {
+  try {
+    loggedFrame = false;
+    var supported = await navigator.xr.isSessionSupported('immersive-vr');
+    log('immersive-vr supported: ' + supported);
+    if (!supported) return;
+
+    session = await navigator.xr.requestSession('immersive-vr');
+    log('session created: ' + Object.prototype.toString.call(session));
+    session.addEventListener('end', function () { log('session ended'); });
+
+    var canvas = document.createElement('canvas');
+    // high-performance = discrete GPU on hybrid machines, matching the app's
+    // renderer. Wrong-adapter WebGL presents as "session runs, frames black".
+    var attrs = { xrCompatible: true, powerPreference: 'high-performance' };
+    gl = canvas.getContext('webgl2', attrs) || canvas.getContext('webgl', attrs);
+    log('gl context: ' + (gl ? (gl instanceof WebGL2RenderingContext ? 'webgl2' : 'webgl1') : 'FAILED'));
+    var dbg = gl.getExtension('WEBGL_debug_renderer_info');
+    log('gl adapter: ' + (dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)));
+    await gl.makeXRCompatible();
+
+    // Diagnostic probe only: does the projection-layer path construct now?
+    if (window.XRWebGLBinding) {
+      try {
+        new XRWebGLBinding(session, gl);
+        log('XRWebGLBinding constructed: OK (projection-layer path available)');
+      } catch (e) {
+        log('XRWebGLBinding constructed: FAILED — ' + e.message);
+      }
+    }
+
+    layer = new XRWebGLLayer(session, gl);
+    log('XRWebGLLayer framebuffer: ' + layer.framebufferWidth + 'x' + layer.framebufferHeight);
+    await session.updateRenderState({ baseLayer: layer });
+
+    var types = ['viewer', 'local', 'local-floor'];
+    for (var i = 0; i < types.length; i++) {
+      try { await session.requestReferenceSpace(types[i]); log('refSpace "' + types[i] + '": OK'); }
+      catch (e) { log('refSpace "' + types[i] + '": ' + (e.message || 'rejected')); }
+    }
+    refSpace = await session.requestReferenceSpace('local');
+
+    session.requestAnimationFrame(onFrame);
+    log('render loop started');
+  } catch (e) {
+    log('ERROR: ' + (e.message || e));
+  }
+}
+
+function onFrame(t, frame) {
+  session.requestAnimationFrame(onFrame);
+  var pose = frame.getViewerPose(refSpace);
+  if (!pose) { return; }
+  gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
+  if (!loggedFrame) {
+    loggedFrame = true;
+    log('views per frame: ' + pose.views.length +
+        (pose.views.length === 2 ? '  (stereo views delivered)' : '  (MONO!)'));
+    for (var i = 0; i < pose.views.length; i++) {
+      var v = pose.views[i], vp = layer.getViewport(v), p = v.transform.position;
+      log('view ' + i + ' eye=' + v.eye +
+          ' viewport[x=' + vp.x + ' y=' + vp.y + ' w=' + vp.width + ' h=' + vp.height + ']' +
+          ' pos=(' + p.x.toFixed(4) + ', ' + p.y.toFixed(4) + ', ' + p.z.toFixed(4) + ')');
+    }
+    log('(eye positions differing in x by ~0.06 m = real IPD stereo)');
+  }
+  gl.enable(gl.SCISSOR_TEST);
+  for (var j = 0; j < pose.views.length; j++) {
+    var view = pose.views[j], vpj = layer.getViewport(view);
+    gl.viewport(vpj.x, vpj.y, vpj.width, vpj.height);
+    gl.scissor(vpj.x, vpj.y, vpj.width, vpj.height);
+    if (view.eye === 'right') gl.clearColor(0.1, 0.3, 1.0, 1.0);
+    else                      gl.clearColor(1.0, 0.1, 0.1, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+  }
+  gl.disable(gl.SCISSOR_TEST);
+}
+</script>
+</body>
+</html>
