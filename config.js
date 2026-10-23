@@ -18,7 +18,7 @@ window.VIEWER_CONFIG = {
   // Valve open/close animation duration (seconds). On-hardware history:
   // 0.7 jarring, 1.5 still too fast. ?animsecs= overrides for tuning.
   valveAnimSeconds: 2.5,
-  version:     "v1.1.1",
+  version:     "v1.1.2",
   // Branding for the in-XR ABOUT panel (white-on-transparent for dark glass).
   brand: {
     logoWhite: "systranLogoWhite.png",
@@ -31,6 +31,14 @@ window.VIEWER_CONFIG = {
   // Changelog (newest first) — rendered dynamically in sidebar
   // ----------------------------------------------------------
   changelog: [
+    {
+      version: "v1.1.2",
+      date: "2026-10-23",
+      items: [
+        "Stylus out of camera view no longer draws a beam from the screen centre into the distance: the 3D system reports that state as a pose parked at the origin, and the viewer now hides the beam, holds the last good pose, ignores presses and shows the not-seen hint until the stylus is seen again",
+        "Launch-screen preview is rendered at a fixed size instead of copied from the window, so it no longer turns into a blurry close-up when the browser window is short (DevTools docked)",
+      ],
+    },
     {
       version: "v1.1.1",
       date: "2026-10-23",
